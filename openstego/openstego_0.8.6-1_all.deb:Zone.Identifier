@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=https://github.com/syvaidya/openstego/releases
+HostUrl=https://objects.githubusercontent.com/github-production-release-asset-2e65be/36506278/41e6619c-8bbc-424b-9d46-ca452760ee5f?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20240222%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240222T035742Z&X-Amz-Expires=300&X-Amz-Signature=7b6d17c2e4b16aa3189e63e8900f3ae4ff3715fb4792abe1e8403fda2ee68bff&X-Amz-SignedHeaders=host&actor_id=46659946&key_id=0&repo_id=36506278&response-content-disposition=attachment%3B%20filename%3Dopenstego_0.8.6-1_all.deb&response-content-type=application%2Foctet-stream
