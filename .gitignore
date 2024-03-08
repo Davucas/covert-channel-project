@@ -12,7 +12,9 @@ _deps
 
 openstego_images
 steghide_images
-
+zipped_images/
+extracted_images/
+experiments_results/
 
 # build folder
 build/*
