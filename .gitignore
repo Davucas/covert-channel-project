@@ -12,6 +12,8 @@ _deps
 
 openstego_images
 steghide_images
+zipped_images/
+extracted_images/
 
 
 # build folder
