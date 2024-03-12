@@ -8,6 +8,9 @@ import csv
 import matplotlib.pyplot as plt
 from skimage.io import imread
 import zipfile
+from pathlib import Path
+
+current_working_dir = Path().absolute()
 
 def calculate_psnr(original_image_path, modified_image_path):
     original = imread(original_image_path)
@@ -65,22 +68,18 @@ def calculate_robustness_to_compression(modified_image, zipped_path, extract_pat
 
 def process_images_in_directory(data_sizes, directory, output_base_dir, output_csv, password, zipped_dir, extract_dir):
     # Iterate over all directories and files within the given directory
-    for root, dirs, files in os.walk(directory):
-        # if not os.path.exists(zipped_dir):
-        #     os.mkdir(zipped_dir)
-        # if not os.path.exists(extract_dir):
-        #     os.mkdir(extract_dir)
-        
-        for name in files:
-            if name.lower().endswith(('.bmp', '.jpg', '.jpeg', '.png')):
-                image_path = os.path.join(root, name)
-                relative_path = os.path.relpath(root, directory)  # Get the relative path to create equivalent structure in output
-                output_dir = os.path.join(output_base_dir, relative_path)
-                zipped_path = os.path.join(zipped_dir, relative_path)
-                extract_path = os.path.join(extract_dir, relative_path)
-                os.makedirs(output_dir, exist_ok=True)
-                os.makedirs(zipped_path, exist_ok=True)
-                os.makedirs(extract_path, exist_ok=True)
+    # for root, dirs, files in os.walk(directory):
+    for sub_dir in directory.iterdir():
+        print(f"Working on the directory of: {sub_dir}")
+        for name in sub_dir.iterdir():
+            if name.suffix in ['.bmp', '.jpg', '.jpeg', '.png']:
+                image_path = directory / sub_dir, name
+                output_dir = output_base_dir / sub_dir
+                zipped_path = zipped_dir / sub_dir
+                extract_path = extract_dir / sub_dir
+                output_dir.mkdir(parents=True, exist_ok=True)
+                zipped_path.mkdir(parents=True, exist_ok=True)
+                extract_path.mkdir(parents=True, exist_ok=True)
                 
                 # Process each data size for the current image
                 for data_size in data_sizes:
@@ -89,11 +88,11 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                         original_data = '0'*data_size
                         f.write('0' * data_size)
                     
-                    output_image_path = os.path.join(output_dir, f"{name}_hidden_{data_size}.bmp")
-                    embed_data_with_steghide(image_path, data_file, password, output_image_path) 
+                    output_image_path = output_dir / Path(f"{name}_hidden_{data_size}.bmp")
+                    embed_data_with_steghide(str(image_path), data_file, password, output_image_path) 
 
-                    psnr_value = calculate_psnr(image_path, output_image_path)
-                    ssim_value = calculate_ssi(image_path, output_image_path)
+                    psnr_value = calculate_psnr(str(image_path), output_image_path)
+                    ssim_value = calculate_ssi(str(image_path), output_image_path)
 
                     
                     image_match = calculate_robustness_to_compression(output_image_path, zipped_path, extract_path)
@@ -150,12 +149,14 @@ def plot_results(csv_filename):
 
 def main():
     data_sizes = [100, 500, 1000, 5000, 10000]
-    source_dir = "original_images_BMP"
-    output_base_dir = "steghide_images"
-    output_csv = "experiment_results.csv"
+    source_dir = current_working_dir / Path("original_images_BMP")
+    output_base_dir = current_working_dir / Path("steghide_images")
+    output_csv = current_working_dir / Path("experiment_results.csv")
     password = ""
-    zipped_dir = "zipped_images_steghide"
-    extract_dir = "extracted_images_steghide"
+    zipped_dir = current_working_dir / Path("zipped_images_steghide")
+    extract_dir = current_working_dir / Path("extracted_images_steghide")
+    
+    
 
     initialize_csv(output_csv)
     process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
