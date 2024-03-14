@@ -16,6 +16,7 @@ zipped_images/
 extracted_images/
 experiments_results/
 experiments_results.csv
+steghide_images/
 
 # build folder
 build/*

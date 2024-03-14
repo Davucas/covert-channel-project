@@ -31,26 +31,19 @@ def calculate_file_hash(file_name):
     return hash_obj.hexdigest()
 
 def embed_data_with_steghide(image_path, data_file, password, output_image_path):
-    subprocess.run(['steghide', 'embed', '-cf', image_path, '-ef', data_file, '-p', password, '-sf', output_image_path], check=True)
+    subprocess.run(['steghide', 'embed', '-cf', image_path, '-ef', data_file, '-p', password, '-sf', output_image_path, '-f'], check=True)
 
-def get_embedded_message_steghide(image_path, password):
-    message = subprocess.run(['steghide', 'extract', '-cf', image_path, '-p', password], check=True)
-    return message
-
+def get_embedded_message_steghide(image_path, data_path, password):
+    message = subprocess.run(['steghide', 'extract', '-sf', image_path, '-xf', data_path, '-p', password, '-f'], check=True)
 
 def zip_extract_image(modified_image_path, zipped_path, extract_path):
     with zipfile.ZipFile(zipped_path, 'w') as zip_ref:
             zip_ref.write(modified_image_path, arcname=modified_image_path)
     
     with zipfile.ZipFile(zipped_path, 'r') as zip_ref:
-        file_data = zip_ref.read(modified_image_path[1:])
+        file_data = zip_ref.read(modified_image_path)
         with open(extract_path, 'wb') as new_extracted_file:
             new_extracted_file.write(file_data)
-    
-    # original_file_hash = calculate_file_hash(modified_image)
-    # extracted_file_hash = calculate_file_hash(extract_path)
-    # return original_file_hash == extracted_file_hash
-
 
 def calculate_robustness_to_compression(modified_image, zipped_path, extract_path):
     # ZIP AND UNZIP IMAGE CALLING zip_extract_image
@@ -66,11 +59,6 @@ def calculate_robustness_to_compression(modified_image, zipped_path, extract_pat
 def process_images_in_directory(data_sizes, directory, output_base_dir, output_csv, password, zipped_dir, extract_dir):
     # Iterate over all directories and files within the given directory
     for root, dirs, files in os.walk(directory):
-        # if not os.path.exists(zipped_dir):
-        #     os.mkdir(zipped_dir)
-        # if not os.path.exists(extract_dir):
-        #     os.mkdir(extract_dir)
-        
         for name in files:
             if name.lower().endswith(('.bmp', '.jpg', '.jpeg', '.png')):
                 image_path = os.path.join(root, name)
@@ -89,20 +77,22 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                         original_data = '0'*data_size
                         f.write('0' * data_size)
                     
-                    output_image_path = os.path.join(output_dir, f"{name}_hidden_{data_size}.bmp")
+                    data_integrity = False
+                    output_image_path = os.path.join(output_dir, f"{name}")
                     embed_data_with_steghide(image_path, data_file, password, output_image_path) 
 
                     psnr_value = calculate_psnr(image_path, output_image_path)
                     ssim_value = calculate_ssi(image_path, output_image_path)
-
+                    zipped_file_path = os.path.join(zipped_path, name)
+                    extract_file_path = os.path.join(extract_path, name)
+                    image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
                     
-                    image_match = calculate_robustness_to_compression(output_image_path, zipped_path, extract_path)
-                    data_integrity = False
-
-                    if original_data == get_embedded_message_steghide(zipped_path):
-                        data_integrity = True    
+                    data_extracted = f'/tmp/data_extracted_{data_size}.txt'
+                    get_embedded_message_steghide(extract_file_path, data_extracted, password)
+                    with open(data_extracted, 'r') as file:
+                        if original_data == file.read(data_size):
+                            data_integrity = True    
                     
-
                     with open(output_csv, 'a', newline='') as file:
                         writer = csv.writer(file)
                         writer.writerow([data_size, psnr_value, ssim_value, data_integrity, image_match])
@@ -154,8 +144,8 @@ def main():
     output_base_dir = "steghide_images"
     output_csv = "experiment_results.csv"
     password = ""
-    zipped_dir = "zipped_images_steghide"
-    extract_dir = "extracted_images_steghide"
+    zipped_dir = "./zipped_images_steghide"
+    extract_dir = "./extracted_images_steghide"
 
     initialize_csv(output_csv)
     process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
