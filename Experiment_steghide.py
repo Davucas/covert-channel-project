@@ -8,6 +8,9 @@ import csv
 import matplotlib.pyplot as plt
 from skimage.io import imread
 import zipfile
+from pathlib import Path
+
+current_working_dir = Path().absolute()
 
 def calculate_psnr(original_image_path, modified_image_path):
     original = imread(original_image_path)
@@ -140,9 +143,9 @@ def plot_results(csv_filename):
 
 def main():
     data_sizes = [100, 500, 1000, 5000, 10000]
-    source_dir = "original_images_BMP"
-    output_base_dir = "steghide_images"
-    output_csv = "experiment_results.csv"
+    source_dir = current_working_dir / Path("original_images_BMP")
+    output_base_dir = current_working_dir / Path("steghide_images")
+    output_csv = current_working_dir / Path("experiment_results.csv")
     password = ""
     zipped_dir = "./zipped_images_steghide"
     extract_dir = "./extracted_images_steghide"
