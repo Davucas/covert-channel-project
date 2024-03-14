@@ -8,9 +8,6 @@ import csv
 import matplotlib.pyplot as plt
 from skimage.io import imread
 import zipfile
-from pathlib import Path
-
-current_working_dir = Path().absolute()
 
 def calculate_psnr(original_image_path, modified_image_path):
     original = imread(original_image_path)
@@ -62,6 +59,12 @@ def calculate_robustness_to_compression(modified_image, zipped_path, extract_pat
 def process_images_in_directory(data_sizes, directory, output_base_dir, output_csv, password, zipped_dir, extract_dir):
     # Iterate over all directories and files within the given directory
     for root, dirs, files in os.walk(directory):
+        
+        ###### THIS IS ONLY TEMPORAL UNTIL WE DECIDE IF WE REMOVE THE FLOWER IMAGES OR NOT
+        if root=="original_images_BMP/flowers":
+            continue
+        ######
+
         for name in files:
             if name.lower().endswith(('.bmp', '.jpg', '.jpeg', '.png')):
                 image_path = os.path.join(root, name)
@@ -143,13 +146,13 @@ def plot_results(csv_filename):
 
 def main():
     data_sizes = [100, 500, 1000, 5000, 10000]
-    source_dir = current_working_dir / Path("original_images_BMP")
-    output_base_dir = current_working_dir / Path("steghide_images")
-    output_csv = current_working_dir / Path("experiment_results.csv")
+    source_dir = "original_images_BMP"
+    output_base_dir = "steghide_images"
+    output_csv = "experiment_results_steghide.csv"
     password = ""
     zipped_dir = "./zipped_images_steghide"
     extract_dir = "./extracted_images_steghide"
-
+    
     initialize_csv(output_csv)
     process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
     plot_results(output_csv)
