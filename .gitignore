@@ -10,6 +10,14 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
+openstego_images
+steghide_images
+zipped_images/
+extracted_images/
+experiments_results/
+experiments_results.csv
+steghide_images/
+
 # build folder
 build/*
 
