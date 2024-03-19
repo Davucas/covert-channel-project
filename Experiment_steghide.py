@@ -8,6 +8,8 @@ import csv
 import matplotlib.pyplot as plt
 from skimage.io import imread
 import zipfile
+from typing import List
+import argparse
 
 def calculate_psnr(original_image_path, modified_image_path):
     original = imread(original_image_path)
@@ -46,6 +48,9 @@ def zip_extract_image(modified_image_path, zipped_path, extract_path):
             new_extracted_file.write(file_data)
 
 def calculate_robustness_to_compression(modified_image, zipped_path, extract_path):
+    '''
+    Calculate the robustness of the given image to compression by zipping and unzipping it and comparing the hashes
+    '''
     # ZIP AND UNZIP IMAGE CALLING zip_extract_image
     zip_extract_image(modified_image, zipped_path, extract_path)
 
@@ -55,8 +60,20 @@ def calculate_robustness_to_compression(modified_image, zipped_path, extract_pat
 
     return original_file_hash == extracted_file_hash
 
+def calculate_hidden_data_to_img_size_ratio(hidden_path, image_path):
+    '''
+    Calculate the ratio of hidden data to image size
+    '''
+    hidden_data_size = os.path.getsize(hidden_path)
+    image_size = os.path.getsize(image_path)
+    return hidden_data_size / image_size
 
-def process_images_in_directory(data_sizes, directory, output_base_dir, output_csv, password, zipped_dir, extract_dir):
+def process_images_in_directory(
+        embedFunctionCallback: callable, extractFunctionCallback: callable,
+        hidden_files: List[str], directory: str, output_base_dir: str, output_csv: str, password: str, zipped_dir: str, extract_dir: str):
+    '''
+    Process all images in the given directory and its subdirectories, embedding data of different sizes and calculating PSNR and SSIM
+    '''
     # Iterate over all directories and files within the given directory
     for root, dirs, files in os.walk(directory):
         
@@ -67,7 +84,7 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
         
         for name in files:
             if name.lower().endswith(('.bmp', '.jpg', '.jpeg', '.png')):
-                image_path = os.path.join(root, name)
+                og_image_path = os.path.join(root, name)
                 relative_path = os.path.relpath(root, directory)  # Get the relative path to create equivalent structure in output
                 output_dir = os.path.join(output_base_dir, relative_path)
                 zipped_path = os.path.join(zipped_dir, relative_path)
@@ -108,7 +125,7 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
 def initialize_csv(output_csv):
     with open(output_csv, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(["Data Size (bytes)", "PSNR", "SSIM", "Data Integrity", "Images Match"])
+        writer.writerow(["Image Path", "Data Size (bytes)", "PSNR", "SSIM", "Data Integrity", "Images Match", "Hidden data to Cover Image Ratio"])
 
 
 def plot_results(csv_filename):
@@ -147,15 +164,32 @@ def main():
     data_sizes = [10, 20, 30, 40]    # This is the % of the image_size we want to hide
 
     source_dir = "original_images_BMP"
-    output_base_dir = "steghide_images"
-    output_csv = "experiment_results_steghide.csv"
-    password = ""
-    zipped_dir = "./zipped_images_steghide"
-    extract_dir = "./extracted_images_steghide"
+
+    steghide_output_base_dir = "steghide_images"
+    steghideoutput_csv = "experiment_results_steghide.csv"
+    steghidezipped_dir = "./zipped_images_steghide"
+    steghideextract_dir = "./extracted_images_steghide"
     
-    initialize_csv(output_csv)
-    process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
-    plot_results(output_csv)
+    funcType = 'steghide'
+    password = ""
+
+    openstego_output_base_dir = "openstego_images"
+    openstego_outputcsv = "experiment_results_openstego.csv"
+    openstego_zipped_dir = "./zipped_images_openstego"
+    openstego_extract_dir = "./extracted_images_openstego"
+    
+    if (funcType == 'steghide'):
+        initialize_csv(steghideoutput_csv)
+        process_images_in_directory(
+            embed_data_with_steghide, get_embedded_message_steghide,
+        [hidden_file], source_dir, steghide_output_base_dir, steghideoutput_csv, password, steghidezipped_dir, steghideextract_dir)
+        plot_results(steghideoutput_csv)
+    elif (funcType == 'openstego'):
+        initialize_csv(openstego_outputcsv)
+        process_images_in_directory(
+            embed_data_with_openstego, get_embedded_message_openstego,
+        [hidden_file], source_dir, openstego_output_base_dir, openstego_outputcsv, password, openstego_zipped_dir, openstego_extract_dir)
+        plot_results(openstego_outputcsv)
 
 
 if __name__ == "__main__":

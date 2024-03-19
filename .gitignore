@@ -11,12 +11,16 @@ CTestTestfile.cmake
 _deps
 
 openstego_images
-steghide_images
 zipped_images/
 extracted_images/
 experiments_results/
 experiments_results.csv
 steghide_images/
+extracted_images_steghide/
+*.bmp
+*.png
+*.BMP
+
 
 # build folder
 build/*
