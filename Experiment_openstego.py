@@ -30,11 +30,11 @@ def calculate_file_hash(file_name):
             hash_obj.update(chunk)
     return hash_obj.hexdigest()
 
-def embed_data_with_steghide(image_path, data_file, password, output_image_path):
-    subprocess.run(['steghide', 'embed', '-cf', image_path, '-ef', data_file, '-p', password, '-sf', output_image_path, '-f', '-q'], check=True)
+def embed_data_with_openstego(image_path, data_file, password, output_image_path):
+    subprocess.run(['openstego', 'embed', '-cf', image_path, '-mf', data_file, '-p', password, '-sf', output_image_path], check=True)
 
-def get_embedded_message_steghide(image_path, data_path, password):
-    message = subprocess.run(['steghide', 'extract', '-sf', image_path, '-xf', data_path, '-p', password, '-f', '-q'], check=True)
+def get_embedded_message_openstego(image_path, data_path, password):
+    message = subprocess.run(['openstego', 'extract', '-sf', image_path, '-xf', data_path, '-p', password], check=True)
 
 def zip_extract_image(modified_image_path, zipped_path, extract_path):
     with zipfile.ZipFile(zipped_path, 'w') as zip_ref:
@@ -64,7 +64,7 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
         if root=="original_images_BMP/flowers":
             continue
         ######
-        
+
         for name in files:
             if name.lower().endswith(('.bmp', '.jpg', '.jpeg', '.png')):
                 image_path = os.path.join(root, name)
@@ -86,7 +86,7 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                     
                     data_integrity = False
                     output_image_path = os.path.join(output_dir, f"{name}")
-                    embed_data_with_steghide(image_path, data_file, password, output_image_path) 
+                    embed_data_with_openstego(image_path, data_file, password, output_image_path) 
 
                     psnr_value = calculate_psnr(image_path, output_image_path)
                     ssim_value = calculate_ssi(image_path, output_image_path)
@@ -95,7 +95,7 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                     image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
                     
                     data_extracted = f'/tmp/data_extracted_{data_size}.txt'
-                    get_embedded_message_steghide(extract_file_path, data_extracted, password)
+                    get_embedded_message_openstego(extract_file_path, data_extracted, password)
                     with open(data_extracted, 'r') as file:
                         if original_data == file.read(data_size):
                             data_integrity = True    
@@ -145,13 +145,13 @@ def plot_results(csv_filename):
 
 def main():
     data_sizes = [10, 20, 30, 40]    # This is the % of the image_size we want to hide
-
+    
     source_dir = "original_images_BMP"
-    output_base_dir = "steghide_images"
-    output_csv = "experiment_results_steghide.csv"
+    output_base_dir = "openstego_images"
+    output_csv = "experiment_results_openstego.csv"
     password = ""
-    zipped_dir = "./zipped_images_steghide"
-    extract_dir = "./extracted_images_steghide"
+    zipped_dir = "./zipped_images_openstego"
+    extract_dir = "./extracted_images_openstego"
     
     initialize_csv(output_csv)
     process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
