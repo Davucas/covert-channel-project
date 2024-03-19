@@ -30,11 +30,11 @@ def calculate_file_hash(file_name):
             hash_obj.update(chunk)
     return hash_obj.hexdigest()
 
-def embed_data_with_openstego(image_path, data_file, password, output_image_path):
-    subprocess.run(['openstego', 'embed', '-cf', image_path, '-mf', data_file, '-p', password, '-sf', output_image_path], check=True)
+def embed_data_with_steghide(image_path, data_file, password, output_image_path):
+    subprocess.run(['java', '-jar', '/home/carlos/openstego.jar', 'embed', '-cf', image_path, '-mf', data_file, '-p', password, '-sf', output_image_path, '-C'], check=True)
 
-def get_embedded_message_openstego(image_path, data_path, password):
-    message = subprocess.run(['openstego', 'extract', '-sf', image_path, '-xf', data_path, '-p', password], check=True)
+def get_embedded_message_steghide(image_path, data_path, password):
+    message = subprocess.run(['java', '-jar', '/home/carlos/openstego.jar', 'extract', '-sf', image_path, '-xf', data_path, '-p', password, '-C'], check=True)
 
 def zip_extract_image(modified_image_path, zipped_path, extract_path):
     with zipfile.ZipFile(zipped_path, 'w') as zip_ref:
@@ -78,7 +78,8 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                 
                 # Process each data size for the current image
                 for ratio in data_sizes:
-                    data_size = os.stat(image_path).st_size * ratio
+                    image_size = os.stat(image_path).st_size
+                    data_size = int(ratio * image_size / 100)
                     data_file = f'/tmp/data_{data_size}.txt'
                     with open(data_file, 'w') as f:
                         original_data = '0'*data_size
@@ -86,7 +87,7 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                     
                     data_integrity = False
                     output_image_path = os.path.join(output_dir, f"{name}")
-                    embed_data_with_openstego(image_path, data_file, password, output_image_path) 
+                    embed_data_with_steghide(image_path, data_file, password, output_image_path) 
 
                     psnr_value = calculate_psnr(image_path, output_image_path)
                     ssim_value = calculate_ssi(image_path, output_image_path)
@@ -95,38 +96,41 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                     image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
                     
                     data_extracted = f'/tmp/data_extracted_{data_size}.txt'
-                    get_embedded_message_openstego(extract_file_path, data_extracted, password)
+                    get_embedded_message_steghide(extract_file_path, data_extracted, password)
                     with open(data_extracted, 'r') as file:
                         if original_data == file.read(data_size):
                             data_integrity = True    
                     
                     with open(output_csv, 'a', newline='') as file:
                         writer = csv.writer(file)
-                        writer.writerow([data_size, psnr_value, ssim_value, data_integrity, image_match])
+                        writer.writerow([output_image_path, image_size, data_size, ratio, psnr_value, ssim_value, data_integrity, image_match])
 
 
 def initialize_csv(output_csv):
     with open(output_csv, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(["Data Size (bytes)", "PSNR", "SSIM", "Data Integrity", "Images Match"])
+        writer.writerow(["Image", "Image_size", "Data Size (bytes)", "Ratio", "PSNR", "SSIM", "Data Integrity", "Images Match"])
 
 
 def plot_results(csv_filename):
-    sizes, psnrs, ssims, integrities, matches = [], [], [], [], []
+    image, image_size, sizes, ratios, psnrs, ssims, integrities, matches = [], [], [], [], []
     
     with open(csv_filename, mode='r') as file:
         reader = csv.reader(file)
         next(reader)  # Skip header
         for row in reader:
-            sizes.append(int(row[0]))
-            psnrs.append(float(row[1]))
-            ssims.append(float(row[2]))
-            integrities.append(row[3] == 'True')
-            matches.append(row[4] == 'True')
-
+            image.append(str(row[0]))
+            image_size.append(str(row[1]))
+            sizes.append(int(row[2]))
+            ratios.append(int(row[3]))
+            psnrs.append(float(row[4]))
+            ssims.append(float(row[5]))
+            integrities.append(row[6] == 'True')
+            matches.append(row[7] == 'True')
+    
     # Plotting
     fig, ax1 = plt.subplots()
-    
+
     color = 'tab:red'
     ax1.set_xlabel('Data Size (bytes)')
     ax1.set_ylabel('PSNR', color=color)
@@ -143,9 +147,12 @@ def plot_results(csv_filename):
     plt.title('PSNR and SSIM vs Data Size')
     plt.show()
 
+
+
 def main():
-    data_sizes = [10, 20, 30, 40]    # This is the % of the image_size we want to hide
-    
+    #data_sizes = [100, 500, 1000, 5000, 10000]
+    data_sizes = [1, 2, 3, 4]
+
     source_dir = "original_images_BMP"
     output_base_dir = "openstego_images"
     output_csv = "experiment_results_openstego.csv"
@@ -156,6 +163,7 @@ def main():
     initialize_csv(output_csv)
     process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
     plot_results(output_csv)
+
 
 
 if __name__ == "__main__":

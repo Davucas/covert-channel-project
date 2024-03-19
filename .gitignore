@@ -10,13 +10,15 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
-openstego_images
+openstego_images/
 zipped_images/
 extracted_images/
-experiments_results/
-experiments_results.csv
 steghide_images/
 extracted_images_steghide/
+extracted_images_openstego/
+zipped_images_steghide/
+zipped_images_openstego/
+
 *.bmp
 *.png
 *.BMP
