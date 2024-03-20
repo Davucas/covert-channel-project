@@ -20,7 +20,8 @@ extracted_images_steghide/
 *.bmp
 *.png
 *.BMP
-
+*.jpg
+*.JPG
 
 # build folder
 build/*
