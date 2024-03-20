@@ -30,12 +30,12 @@ def calculate_file_hash(file_name):
             hash_obj.update(chunk)
     return hash_obj.hexdigest()
 
-def embed_data_with_steghide(image_path, data_file, password, output_image_path):
-    subprocess.run(['steghide', 'embed', '-cf', image_path, '-ef', data_file, '-p', password, '-sf', output_image_path, '-f', '-Z', '-q'], check=True)
+def embed_data_with_outguess(image_path, data_file, password, output_image_path):
+    subprocess.run(['outguess', '-k', password, '-d', data_file, image_path, output_image_path, '-p', 100], check=True)
 
-def get_embedded_message_steghide(image_path, data_path, password):
-    message = subprocess.run(['steghide', 'extract', '-sf', image_path, '-xf', data_path, '-p', password, '-f', '-q'], check=True)
-
+def get_embedded_message_outguess(image_path, data_path, password):
+    subprocess.run(['outguess', '-k', password, '-r', image_path, data_path], check=True)
+    
 def zip_extract_image(modified_image_path, zipped_path, extract_path):
     with zipfile.ZipFile(zipped_path, 'w') as zip_ref:
             zip_ref.write(modified_image_path, arcname=modified_image_path)
@@ -56,7 +56,7 @@ def calculate_robustness_to_compression(modified_image, zipped_path, extract_pat
     return original_file_hash == extracted_file_hash
 
 
-def process_images_in_directory(ratio_list, directory, output_base_dir, output_csv, password, zipped_dir, extract_dir):
+def process_images_in_directory(data_sizes, directory, output_base_dir, output_csv, password, zipped_dir, extract_dir):
     # Iterate over all directories and files within the given directory
     for root, dirs, files in os.walk(directory):
         
@@ -77,7 +77,7 @@ def process_images_in_directory(ratio_list, directory, output_base_dir, output_c
                 os.makedirs(extract_path, exist_ok=True)
                 
                 # Process each data size for the current image
-                for ratio in ratio_list:
+                for ratio in data_sizes:
                     image_size = os.stat(image_path).st_size
                     data_size = int(ratio * image_size / 100)
                     data_file = f'/tmp/data_{data_size}.txt'
@@ -87,7 +87,7 @@ def process_images_in_directory(ratio_list, directory, output_base_dir, output_c
                     
                     data_integrity = False
                     output_image_path = os.path.join(output_dir, f"{name}")
-                    embed_data_with_steghide(image_path, data_file, password, output_image_path) 
+                    embed_data_with_outguess(image_path, data_file, password, output_image_path)
 
                     psnr_value = calculate_psnr(image_path, output_image_path)
                     ssim_value = calculate_ssi(image_path, output_image_path)
@@ -96,7 +96,7 @@ def process_images_in_directory(ratio_list, directory, output_base_dir, output_c
                     image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
                     
                     data_extracted = f'/tmp/data_extracted_{data_size}.txt'
-                    get_embedded_message_steghide(extract_file_path, data_extracted, password)
+                    get_embedded_message_outguess(extract_file_path, data_extracted, password)
                     with open(data_extracted, 'r') as file:
                         if original_data == file.read(data_size):
                             data_integrity = True    
@@ -153,12 +153,12 @@ def main():
     #data_sizes = [100, 500, 1000, 5000, 10000]
     data_sizes = [1, 2, 3, 4]
 
-    source_dir = "original_images_BMP"
-    output_base_dir = "steghide_images"
-    output_csv = "experiment_results_steghide.csv"
+    source_dir = "original_images_JPG"
+    output_base_dir = "outguess_images"
+    output_csv = "experiment_results_outguess.csv"
     password = ""
-    zipped_dir = "./zipped_images_steghide"
-    extract_dir = "./extracted_images_steghide"
+    zipped_dir = "./zipped_images_outguess"
+    extract_dir = "./extracted_images_outguess"
     
     initialize_csv(output_csv)
     process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)

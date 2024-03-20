@@ -5,12 +5,12 @@
 # This file is under BSD-3-Clause license.
 
 # Write message
-echo -e "\nEmbedding a message..."
-../src/outguess -k "secret-key-001" -d message.txt test.jpg test-with-message.jpg
+echo -e "\nEmbedding a message..." 
+outguess -k "secret-key-001" -d message.txt test.jpg test-with-message.jpg -p 100
 
 # Retrieve message
-echo -e "\nExtracting a message..."
-../src/outguess -k "secret-key-001" -r test-with-message.jpg text-jpg.txt
+echo -e "\nExtracting a message..." 
+outguess -k "secret-key-001" -r test-with-message.jpg text-jpg.txt
 cat text-jpg.txt | grep "inside of the image" || { echo ERROR; exit 1; }
 
 # Remove files
