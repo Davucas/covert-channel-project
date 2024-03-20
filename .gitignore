@@ -28,7 +28,6 @@ extracted_images_outguess/
 *.jpg
 *.JPG
 
-
 # build folder
 build/*
 
