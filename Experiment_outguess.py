@@ -31,10 +31,16 @@ def calculate_file_hash(file_name):
     return hash_obj.hexdigest()
 
 def embed_data_with_outguess(image_path, data_file, password, output_image_path):
-    subprocess.run(['outguess', '-k', password, '-d', data_file, image_path, output_image_path, '-p', 100], check=True)
+    try:
+        subprocess.run(['outguess', '-k', password, '-d', data_file, image_path, output_image_path, '-p', 100], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error embedding data in {image_path}: {e}")
 
 def get_embedded_message_outguess(image_path, data_path, password):
-    subprocess.run(['outguess', '-k', password, '-r', image_path, data_path], check=True)
+    try:
+        subprocess.run(['outguess', '-k', password, '-r', image_path, data_path], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error extracting data from {image_path}: {e}")
     
 def zip_extract_image(modified_image_path, zipped_path, extract_path):
     with zipfile.ZipFile(zipped_path, 'w') as zip_ref:
@@ -87,23 +93,30 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                     
                     data_integrity = False
                     output_image_path = os.path.join(output_dir, f"{name}")
-                    embed_data_with_outguess(image_path, data_file, password, output_image_path)
+                    try:
+                        embed_data_with_outguess(image_path, data_file, password, output_image_path)
+                        print('Data embedded')
+                        psnr_value = calculate_psnr(image_path, output_image_path)
+                        ssim_value = calculate_ssi(image_path, output_image_path)
+                        zipped_file_path = os.path.join(zipped_path, name)
+                        extract_file_path = os.path.join(extract_path, name)
+                        image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
+                        
+                        data_extracted = f'/tmp/data_extracted_{data_size}.txt'
+                        get_embedded_message_outguess(extract_file_path, data_extracted, password)
+                        with open(data_extracted, 'r') as file:
+                            if original_data == file.read(data_size):
+                                data_integrity = True    
+                        
+                        with open(output_csv, 'a', newline='') as file:
+                            writer = csv.writer(file)
+                            writer.writerow([output_image_path, image_size, data_size, ratio, psnr_value, ssim_value, data_integrity, image_match])
 
-                    psnr_value = calculate_psnr(image_path, output_image_path)
-                    ssim_value = calculate_ssi(image_path, output_image_path)
-                    zipped_file_path = os.path.join(zipped_path, name)
-                    extract_file_path = os.path.join(extract_path, name)
-                    image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
-                    
-                    data_extracted = f'/tmp/data_extracted_{data_size}.txt'
-                    get_embedded_message_outguess(extract_file_path, data_extracted, password)
-                    with open(data_extracted, 'r') as file:
-                        if original_data == file.read(data_size):
-                            data_integrity = True    
-                    
-                    with open(output_csv, 'a', newline='') as file:
-                        writer = csv.writer(file)
-                        writer.writerow([output_image_path, image_size, data_size, ratio, psnr_value, ssim_value, data_integrity, image_match])
+                    except Exception as e:
+                        print(f"Error processing {image_path}: {e}")
+                        with open(output_csv, 'a', newline='') as file:
+                            writer = csv.writer(file)
+                            writer.writerow([f'Error processing {image_path}', image_size, data_size, ratio, 0, 0, False, False])
 
 
 def initialize_csv(output_csv):
@@ -113,12 +126,14 @@ def initialize_csv(output_csv):
 
 
 def plot_results(csv_filename):
-    image, image_size, sizes, ratios, psnrs, ssims, integrities, matches = [], [], [], [], []
+    image, image_size, sizes, ratios, psnrs, ssims, integrities, matches = [], [], [], [], [], [], [], []
     
     with open(csv_filename, mode='r') as file:
         reader = csv.reader(file)
         next(reader)  # Skip header
         for row in reader:
+            if 'Error' in str(row[0]):
+                continue
             image.append(str(row[0]))
             image_size.append(str(row[1]))
             sizes.append(int(row[2]))
@@ -145,7 +160,7 @@ def plot_results(csv_filename):
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
     plt.title('PSNR and SSIM vs Data Size')
-    plt.show()
+    # plt.show()
 
 
 
@@ -155,8 +170,8 @@ def main():
 
     source_dir = "original_images_JPG"
     output_base_dir = "outguess_images"
-    output_csv = "experiment_results_outguess.csv"
-    password = ""
+    output_csv = "./experiment_results_outguess.csv"
+    password = "123"
     zipped_dir = "./zipped_images_outguess"
     extract_dir = "./extracted_images_outguess"
     

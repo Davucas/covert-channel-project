@@ -113,7 +113,7 @@ def initialize_csv(output_csv):
 
 
 def plot_results(csv_filename):
-    image, image_size, sizes, ratios, psnrs, ssims, integrities, matches = [], [], [], [], []
+    image, image_size, sizes, ratios, psnrs, ssims, integrities, matches = [], [], [], [], [], [], [], []
     
     with open(csv_filename, mode='r') as file:
         reader = csv.reader(file)
@@ -155,13 +155,13 @@ def main():
 
     source_dir = "original_images_BMP"
     output_base_dir = "openstego_images"
-    output_csv = "experiment_results_openstego.csv"
+    output_csv = "./experiment_results_openstego.csv"
     password = ""
     zipped_dir = "./zipped_images_openstego"
     extract_dir = "./extracted_images_openstego"
     
-    initialize_csv(output_csv)
-    process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
+    # initialize_csv(output_csv)
+    # process_images_in_directory(data_sizes, source_dir, output_base_dir, output_csv, password, zipped_dir, extract_dir)
     plot_results(output_csv)
 
 
