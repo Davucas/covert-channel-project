@@ -31,10 +31,19 @@ def calculate_file_hash(file_name):
     return hash_obj.hexdigest()
 
 def embed_data_with_steghide(image_path, data_file, password, output_image_path):
-    subprocess.run(['steghide', 'embed', '-cf', image_path, '-ef', data_file, '-p', password, '-sf', output_image_path, '-f', '-Z', '-q'], check=True)
+    try:
+        print(f'The command run is steghide embed -cf {image_path} -ef {data_file} -p {password} -sf {output_image_path} -f -Z -q')
+        subprocess.run(['steghide', 'embed', '-cf', image_path, '-ef', data_file, '-p', password, '-sf', output_image_path, '-f', '-Z', '-q'], check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error embedding data in {image_path}: {e}")
+        raise Exception(e.stderr.decode("utf-8"))
 
 def get_embedded_message_steghide(image_path, data_path, password):
-    message = subprocess.run(['steghide', 'extract', '-sf', image_path, '-xf', data_path, '-p', password, '-f', '-q'], check=True)
+    try:
+        subprocess.run(['steghide', 'extract', '-sf', image_path, '-xf', data_path, '-p', password, '-f', '-q'], check=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error extracting data from {image_path}: {e}")
+        raise Exception(e.stderr.decode("utf-8"))
 
 def zip_extract_image(modified_image_path, zipped_path, extract_path):
     with zipfile.ZipFile(zipped_path, 'w') as zip_ref:
@@ -87,23 +96,29 @@ def process_images_in_directory(ratio_list, directory, output_base_dir, output_c
                     
                     data_integrity = False
                     output_image_path = os.path.join(output_dir, f"{name}")
-                    embed_data_with_steghide(image_path, data_file, password, output_image_path) 
+                    try:
+                        embed_data_with_steghide(image_path, data_file, password, output_image_path) 
 
-                    psnr_value = calculate_psnr(image_path, output_image_path)
-                    ssim_value = calculate_ssi(image_path, output_image_path)
-                    zipped_file_path = os.path.join(zipped_path, name)
-                    extract_file_path = os.path.join(extract_path, name)
-                    image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
-                    
-                    data_extracted = f'/tmp/data_extracted_{data_size}.txt'
-                    get_embedded_message_steghide(extract_file_path, data_extracted, password)
-                    with open(data_extracted, 'r') as file:
-                        if original_data == file.read(data_size):
-                            data_integrity = True    
-                    
-                    with open(output_csv, 'a', newline='') as file:
-                        writer = csv.writer(file)
-                        writer.writerow([output_image_path, image_size, data_size, ratio, psnr_value, ssim_value, data_integrity, image_match])
+                        psnr_value = calculate_psnr(image_path, output_image_path)
+                        ssim_value = calculate_ssi(image_path, output_image_path)
+                        zipped_file_path = os.path.join(zipped_path, name)
+                        extract_file_path = os.path.join(extract_path, name)
+                        image_match = calculate_robustness_to_compression(output_image_path, zipped_file_path, extract_file_path)
+                        
+                        data_extracted = f'/tmp/data_extracted_{data_size}.txt'
+                        get_embedded_message_steghide(extract_file_path, data_extracted, password)
+                        with open(data_extracted, 'r') as file:
+                            if original_data == file.read(data_size):
+                                data_integrity = True    
+                        
+                        with open(output_csv, 'a', newline='') as file:
+                            writer = csv.writer(file)
+                            writer.writerow([output_image_path, image_size, data_size, ratio, psnr_value, ssim_value, data_integrity, image_match])
+                    except Exception as e:
+                        print(f"Error processing {image_path}: {e}")
+                        with open(output_csv, 'a', newline='') as file:
+                            writer = csv.writer(file)
+                            writer.writerow([f'Error processing {image_path}: {e}', image_size, data_size, ratio, 0, 0, False, False])
 
 
 def initialize_csv(output_csv):
@@ -113,7 +128,7 @@ def initialize_csv(output_csv):
 
 
 def plot_results(csv_filename):
-    image, image_size, sizes, ratios, psnrs, ssims, integrities, matches = [], [], [], [], []
+    image, image_size, sizes, ratios, psnrs, ssims, integrities, matches = [], [], [], [], [], [], [], [], [], [], [], [], []
     
     with open(csv_filename, mode='r') as file:
         reader = csv.reader(file)

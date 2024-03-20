@@ -30,11 +30,27 @@ def calculate_file_hash(file_name):
             hash_obj.update(chunk)
     return hash_obj.hexdigest()
 
+def format_outguessError(error: str):
+    # After the e.stderr got decode like this e.stderr.decode("utf-8"))
+    # Give the last line of the error message
+    return error.split("\n")[-2]
+
+
 def embed_data_with_outguess(image_path, data_file, password, output_image_path):
     try:
-        subprocess.run(['outguess', '-k', password, '-d', data_file, image_path, output_image_path, '-p', 100], check=True)
+        print(f"The command run is outguess -k {password} -d {data_file} {image_path} {output_image_path} -p 100")
+        subprocess.run(['outguess', '-k', password, '-d', data_file, image_path, output_image_path, '-p', '100'],
+                       check=True, capture_output=True)
     except subprocess.CalledProcessError as e:
+        # print out the entire output return from the process
+        # print out the stdout also, not just stderr
+        # print(f'The stdout is {e.stdout}')
+        # print(f'The error is {format_outguessError(e.stderr.decode("utf-8"))}')
+        # print(f'The stderr is {e.stderr.decode("utf-8")}')
         print(f"Error embedding data in {image_path}: {e}")
+        raise Exception(format_outguessError(e.stderr.decode("utf-8")))
+    # except Exception as e:
+    #     print(f"Error embedding in general exception data in {image_path}: {e}")
 
 def get_embedded_message_outguess(image_path, data_path, password):
     try:
@@ -93,9 +109,10 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                     
                     data_integrity = False
                     output_image_path = os.path.join(output_dir, f"{name}")
+                    os.makedirs(output_dir, exist_ok=True)
+
                     try:
                         embed_data_with_outguess(image_path, data_file, password, output_image_path)
-                        print('Data embedded')
                         psnr_value = calculate_psnr(image_path, output_image_path)
                         ssim_value = calculate_ssi(image_path, output_image_path)
                         zipped_file_path = os.path.join(zipped_path, name)
@@ -116,7 +133,7 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                         print(f"Error processing {image_path}: {e}")
                         with open(output_csv, 'a', newline='') as file:
                             writer = csv.writer(file)
-                            writer.writerow([f'Error processing {image_path}', image_size, data_size, ratio, 0, 0, False, False])
+                            writer.writerow([f'Error processing {image_path}: {e}', image_size, data_size, ratio, 0, 0, False, False])
 
 
 def initialize_csv(output_csv):
@@ -171,7 +188,7 @@ def main():
     source_dir = "original_images_JPG"
     output_base_dir = "outguess_images"
     output_csv = "./experiment_results_outguess.csv"
-    password = "123"
+    password = ""
     zipped_dir = "./zipped_images_outguess"
     extract_dir = "./extracted_images_outguess"
     
