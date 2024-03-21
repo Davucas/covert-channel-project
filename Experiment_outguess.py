@@ -110,6 +110,14 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                     data_integrity = False
                     output_image_path = os.path.join(output_dir, f"{name}")
                     os.makedirs(output_dir, exist_ok=True)
+                    os.makedirs('./ouguesscopy', exist_ok=True)
+
+                    # Make a copy of the original image if it exists
+                    if os.path.exists(output_image_path):
+                        output_image_path_copy = os.path.join('./ouguesscopy', f"copy_{name}")
+                        Image.open(output_image_path).save(output_image_path_copy)
+                    else:
+                        output_image_path_copy = 'FALSE'
 
                     try:
                         embed_data_with_outguess(image_path, data_file, password, output_image_path)
@@ -130,6 +138,14 @@ def process_images_in_directory(data_sizes, directory, output_base_dir, output_c
                             writer.writerow([output_image_path, image_size, data_size, ratio, psnr_value, ssim_value, data_integrity, image_match])
 
                     except Exception as e:
+                        # Recover the image back to the output_image_path if a copy was made
+                        if os.path.exists(output_image_path_copy):
+                            Image.open(output_image_path_copy).save(output_image_path)
+                            print('Recovering this image :', output_image_path)
+                        else:
+                            # Remove the image at the output_image_path
+                            os.remove(output_image_path)
+
                         print(f"Error processing {image_path}: {e}")
                         with open(output_csv, 'a', newline='') as file:
                             writer = csv.writer(file)
